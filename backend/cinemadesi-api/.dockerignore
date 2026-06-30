@@ -1,0 +1,19 @@
+# Don't ship build output / IDE / git into the build context.
+target/
+.idea/
+.vscode/
+*.iml
+.git/
+.gitignore
+.gitkeep
+.DS_Store
+
+# Local-only files
+.env
+.env.local
+application-local.yml
+application-secret.yml
+
+# Tests we don't need in the container (but Maven needs src/test for the build,
+# so don't exclude src/test here — only artefacts)
+**/*.log

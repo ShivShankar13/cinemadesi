@@ -1,0 +1,25 @@
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    # In dev, allow Flyway to repair/clean if needed.
+    # Do NOT enable clean-disabled=false in prod.
+    clean-disabled: true
+
+logging:
+  level:
+    root: INFO
+    com.cinemadesi: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+
+# Swagger UI on in dev only
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true

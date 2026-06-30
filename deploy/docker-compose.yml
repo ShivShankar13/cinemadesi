@@ -1,0 +1,92 @@
+# docker-compose.yml — placed on the VPS at /opt/cinemadesi/docker-compose.yml
+# Loads env vars from a sibling `.env` file (created from .env.example).
+#
+# Usage on the VPS:
+#   docker compose pull && docker compose up -d
+#
+# CI does this for you on every push to main.
+
+services:
+  api:
+    # Replace <your-gh-username> with your GitHub username (lowercase).
+    # CI pushes :latest on every main build, plus :<sha> for pinning.
+    image: ghcr.io/${GITHUB_OWNER}/cinemadesi-api:${API_TAG:-latest}
+    container_name: cinemadesi-api
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"   # change to "127.0.0.1:8080:8080" if you put Caddy/Nginx in front
+
+    environment:
+      # ── DB ────────────────────────────────────────────────────────────
+      # Default points at the Postgres service below. To use Supabase
+      # instead, comment out the `db` service and set DATABASE_URL to
+      # your Supabase Session-mode connection string.
+      DATABASE_URL: ${DATABASE_URL:-jdbc:postgresql://db:5432/cinemadesi}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # ── Auth ──────────────────────────────────────────────────────────
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+
+      # ── External services ─────────────────────────────────────────────
+      TMDB_API_KEY: ${TMDB_API_KEY}
+
+      # ── App URLs ──────────────────────────────────────────────────────
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+
+      # ── Mail (Gmail SMTP) ─────────────────────────────────────────────
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+
+      # Spring runtime
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    image: postgres:16-alpine
+    container_name: cinemadesi-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: cinemadesi
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    volumes:
+      - cinemadesi-db-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d cinemadesi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Bind only to localhost — never expose Postgres to the public internet.
+    # If you need to connect from your laptop, use SSH port-forwarding.
+    ports:
+      - "127.0.0.1:5432:5432"
+
+volumes:
+  cinemadesi-db-data:

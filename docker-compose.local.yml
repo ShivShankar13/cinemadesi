@@ -1,0 +1,87 @@
+# docker-compose.local.yml — for testing the Docker setup on your laptop.
+#
+# Differences from deploy/docker-compose.yml:
+#   - Builds the API image locally instead of pulling from GHCR
+#   - Reasonable defaults so a first run works with zero .env setup
+#   - Postgres exposed on localhost:5432 so you can poke at it with psql
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up --build
+#
+# Stop:
+#   docker compose -f docker-compose.local.yml down            # keep data
+#   docker compose -f docker-compose.local.yml down -v          # wipe DB
+
+services:
+  api:
+    build:
+      context: ./backend/cinemadesi-api
+      dockerfile: Dockerfile
+    image: cinemadesi-api:local
+    container_name: cinemadesi-api-local
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      # ── DB (points at the local pg service below) ─────────────────
+      DATABASE_URL: jdbc:postgresql://db:5432/cinemadesi
+      DB_USERNAME: cinemadesi
+      DB_PASSWORD: cinemadesi
+
+      # ── Auth ──────────────────────────────────────────────────────
+      # 32+ chars to keep HS256 happy. Replace before publishing anywhere.
+      JWT_SECRET: "local-dev-jwt-secret-must-be-at-least-32-bytes-long-yes-really"
+      GOOGLE_CLIENT_ID: ""
+
+      # ── External services (leave empty for first smoke test) ─────
+      TMDB_API_KEY: ""
+
+      # ── App URLs ──────────────────────────────────────────────────
+      FRONTEND_BASE_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+
+      # ── Mail (empty → emails are skipped, URLs logged to stdout) ──
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM: ""
+      MAIL_FROM_NAME: CinemaDesi
+
+      SPRING_PROFILES_ACTIVE: dev
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: postgres:16-alpine
+    container_name: cinemadesi-db-local
+    environment:
+      POSTGRES_DB: cinemadesi
+      POSTGRES_USER: cinemadesi
+      POSTGRES_PASSWORD: cinemadesi
+    # No host port mapping — port 5432 on the host is busy (likely your
+    # local Postgres install). The API container reaches the DB at
+    # `db:5432` on the internal Docker network, which is unaffected.
+    #
+    # If you want to poke at this DB from your laptop, uncomment below
+    # (and pick a host port that's free):
+    # ports:
+    #   - "127.0.0.1:5433:5432"
+    volumes:
+      - cinemadesi-db-local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinemadesi -d cinemadesi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  cinemadesi-db-local:

@@ -1,0 +1,136 @@
+name: Build & deploy backend
+
+# Triggers:
+#   - push to main when files under backend/** change
+#   - manual run from the Actions tab
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+      - "deploy/**"
+  workflow_dispatch:
+
+# Cancel in-flight runs when a newer commit lands.
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  # Lowercased owner — required by GHCR. ${{ github.repository_owner }} can have
+  # mixed case if your username does; we lowercase it below in the build step.
+  IMAGE_NAME: ${{ github.repository_owner }}/cinemadesi-api
+
+jobs:
+  # ─── Build + push image to GHCR ──────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write   # required to push to ghcr.io
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # auto-provided
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Lowercase the image name so ghcr is happy
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend/cinemadesi-api
+          file: ./backend/cinemadesi-api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          # Most VPS providers are amd64; add `,linux/arm64` if yours is ARM
+          # (Hetzner CAX / Oracle Ampere / AWS Graviton).
+
+  # ─── Deploy to the VPS over SSH ──────────────────────────────────────
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (for the compose file)
+        uses: actions/checkout@v4
+
+      # Copy the latest compose file to the VPS. We don't copy .env here —
+      # that lives on the VPS only, never in git.
+      - name: Upload docker-compose.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key:      ${{ secrets.VPS_SSH_KEY }}
+          port:     ${{ secrets.VPS_PORT || 22 }}
+          source:   "deploy/docker-compose.yml"
+          target:   "/opt/cinemadesi/"
+          strip_components: 1
+
+      # Pull the newly-built image and rotate the running container.
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key:      ${{ secrets.VPS_SSH_KEY }}
+          port:     ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -euo pipefail
+
+            cd /opt/cinemadesi
+
+            # Log into GHCR so we can pull (only needed for private images,
+            # but harmless for public ones too).
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u "${{ github.actor }}" --password-stdin
+
+            export API_TAG=latest
+            export GITHUB_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+
+            docker compose pull api
+            docker compose up -d --remove-orphans
+
+            # Wait for the health-check to pass, fail fast if it doesn't.
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost:8080/api/v1/health >/dev/null; then
+                echo "✓ API healthy"
+                exit 0
+              fi
+              echo "waiting for API ($i/30)…"
+              sleep 2
+            done
+            echo "✗ API failed to become healthy in 60s"
+            docker compose logs --tail=120 api
+            exit 1
