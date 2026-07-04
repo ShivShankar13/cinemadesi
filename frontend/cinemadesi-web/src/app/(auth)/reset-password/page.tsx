@@ -13,6 +13,14 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function ResetPasswordPage() {
+  return (
+    <React.Suspense fallback={<div className="h-96 rounded-2xl border border-brand-border bg-brand-surface/70" />}>
+      <ResetPasswordForm />
+    </React.Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";

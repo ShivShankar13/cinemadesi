@@ -15,6 +15,14 @@ import { cn } from "@/lib/utils";
 import type { Industry } from "@/types";
 
 export default function DiscoverPage() {
+  return (
+    <React.Suspense fallback={<div className="mx-auto max-w-7xl px-6 pt-8 lg:px-10"><div className="h-96 rounded-2xl border border-brand-border bg-brand-surface/70" /></div>}>
+      <DiscoverContent />
+    </React.Suspense>
+  );
+}
+
+function DiscoverContent() {
   const router = useRouter();
   const params = useSearchParams();
   const industryParam = params.get("industry") as Industry | null;

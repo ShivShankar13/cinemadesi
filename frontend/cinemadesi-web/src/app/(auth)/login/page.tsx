@@ -12,6 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
+  // Wrap in Suspense — useSearchParams() below opts this page into
+  // dynamic rendering, but Next.js requires a Suspense boundary so the
+  // static shell can still be prerendered.
+  return (
+    <React.Suspense fallback={<div className="h-96 rounded-2xl border border-brand-border bg-brand-surface/70" />}>
+      <LoginForm />
+    </React.Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
