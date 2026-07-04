@@ -6,10 +6,10 @@ import { motion } from "framer-motion";
 import { Compass, Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilmGrid } from "@/components/film/FilmGrid";
-import { FilmSearch } from "@/components/film/FilmSearch";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useTrendingFilms } from "@/hooks/useFilms";
 import { useQuickAddToWatchlist } from "@/hooks/useWatchlist";
+import { useSearchPalette } from "@/store/searchPaletteStore";
 import { INDUSTRIES, INDUSTRY_COLORS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Industry } from "@/types";
@@ -27,7 +27,7 @@ function DiscoverContent() {
   const params = useSearchParams();
   const industryParam = params.get("industry") as Industry | null;
 
-  const [palette, setPalette] = React.useState(false);
+  const openPalette = useSearchPalette((s) => s.open);
   const trending = useTrendingFilms(industryParam ?? undefined);
   const quickAdd = useQuickAddToWatchlist();
 
@@ -40,8 +40,6 @@ function DiscoverContent() {
 
   return (
     <>
-      <FilmSearch open={palette} onOpenChange={setPalette} />
-
       <div className="mx-auto max-w-7xl px-6 pt-8 pb-16 lg:px-10">
         {/* Header */}
         <motion.section
@@ -66,7 +64,7 @@ function DiscoverContent() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Button onClick={() => setPalette(true)} className="gap-2">
+            <Button onClick={() => openPalette()} className="gap-2">
               <Search className="h-4 w-4" />
               Search films
               <kbd className="ml-2 rounded bg-black/30 px-1.5 py-0.5 font-mono text-[10px]">
@@ -124,7 +122,7 @@ function DiscoverContent() {
               icon={Compass}
               title="Nothing trending here yet"
               description="Try a different industry, or search the catalog with /."
-              action={{ label: "Open search", onClick: () => setPalette(true) }}
+              action={{ label: "Open search", onClick: () => openPalette() }}
             />
           ) : (
             <FilmGrid

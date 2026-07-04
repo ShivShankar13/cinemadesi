@@ -55,6 +55,11 @@ function GroupDetailContent() {
 
   const [inviteOpen, setInviteOpen] = React.useState(false);
 
+  // Compute membership + role once — used by hooks below and by JSX later.
+  const myId = session?.user?.id;
+  const myMembership = group.data?.members?.find((m) => m.user.id === myId);
+  const isAdmin = myMembership?.role === "ADMIN";
+
   // If we landed with ?invite=<username>, open the invite modal automatically
   // (only if we're an admin — the modal is admin-only).
   React.useEffect(() => {
@@ -65,10 +70,6 @@ function GroupDetailContent() {
   const feedSentinelRef = useIntersection(() => {
     if (feed.hasNextPage && !feed.isFetchingNextPage) feed.fetchNextPage();
   });
-
-  const myId = session?.user?.id;
-  const myMembership = group.data?.members?.find((m) => m.user.id === myId);
-  const isAdmin = myMembership?.role === "ADMIN";
 
   if (group.isLoading) return <GroupSkeleton />;
   if (group.isError || !group.data) {

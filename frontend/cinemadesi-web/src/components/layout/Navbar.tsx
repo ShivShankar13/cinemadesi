@@ -8,7 +8,9 @@ import { motion } from "framer-motion";
 import { Bell, LogOut, Search, Settings, User as UserIcon } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { FilmSearch } from "@/components/film/FilmSearch";
 import { Button } from "@/components/ui/button";
+import { useSearchPalette } from "@/store/searchPaletteStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +31,9 @@ export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [scrolled, setScrolled] = React.useState(false);
+  const paletteOpen = useSearchPalette((s) => s.isOpen);
+  const setPaletteOpen = useSearchPalette((s) => s.setOpen);
+  const openPalette = useSearchPalette((s) => s.open);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -81,21 +86,33 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Search pill (desktop) — links to /discover for now */}
+        {/* Search pill (desktop) — opens the global command palette */}
         <div className="ml-auto hidden flex-1 max-w-md md:flex">
-          <Link
-            href="/discover"
-            className="group flex w-full items-center gap-3 rounded-full border border-brand-border bg-brand-surface/60 px-4 py-2 text-sm text-brand-textMuted transition-colors hover:border-brand-borderHi hover:bg-brand-surface"
+          <button
+            type="button"
+            onClick={openPalette}
+            aria-label="Search films"
+            className="group flex w-full items-center gap-3 rounded-full border border-brand-border bg-brand-surface/60 px-4 py-2 text-sm text-brand-textMuted transition-colors hover:border-brand-borderHi hover:bg-brand-surface hover:text-brand-text"
           >
             <Search className="h-4 w-4" />
             <span className="flex-1 text-left">Search films, people, lists…</span>
             <kbd className="rounded border border-brand-border bg-brand-surface3 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-brand-textMuted">
               /
             </kbd>
-          </Link>
+          </button>
         </div>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
+          {/* Mobile-only icon trigger (the pill is hidden under md) */}
+          <button
+            type="button"
+            onClick={openPalette}
+            aria-label="Search films"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-brand-textMuted transition-colors hover:bg-brand-surface2 hover:text-brand-text md:hidden"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+
           {status === "authenticated" ? (
             <>
               <Button
@@ -170,6 +187,11 @@ export function Navbar() {
           )}
         </div>
       </div>
+
+      {/* The one global FilmSearch instance. Its own `/` hotkey still works
+          anywhere on the site — and the navbar's search pill / icon also
+          calls open() to trigger it. */}
+      <FilmSearch open={paletteOpen} onOpenChange={setPaletteOpen} />
     </motion.header>
   );
 }
