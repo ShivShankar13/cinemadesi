@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import {
@@ -33,8 +33,18 @@ import {
 import { useIntersection } from "@/hooks/useIntersection";
 
 export default function GroupDetailPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <GroupDetailContent />
+    </React.Suspense>
+  );
+}
+
+function GroupDetailContent() {
   const params = useParams<{ groupId: string }>();
+  const searchParams = useSearchParams();
   const groupId = params?.groupId;
+  const presetUsername = searchParams.get("invite") ?? undefined;
 
   const { data: session } = useSession();
 
@@ -44,6 +54,13 @@ export default function GroupDetailPage() {
   const removeMember = useRemoveMember(groupId);
 
   const [inviteOpen, setInviteOpen] = React.useState(false);
+
+  // If we landed with ?invite=<username>, open the invite modal automatically
+  // (only if we're an admin — the modal is admin-only).
+  React.useEffect(() => {
+    if (presetUsername && isAdmin && !inviteOpen) setInviteOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetUsername, isAdmin]);
 
   const feedSentinelRef = useIntersection(() => {
     if (feed.hasNextPage && !feed.isFetchingNextPage) feed.fetchNextPage();
@@ -289,6 +306,7 @@ export default function GroupDetailPage() {
               excludeIds={g.members.map((m) => m.user.id)}
               open={inviteOpen}
               onOpenChange={setInviteOpen}
+              presetUsername={presetUsername}
             />
           )}
         </TabsContent>
