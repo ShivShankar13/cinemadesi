@@ -8,18 +8,38 @@ import {
   Home,
   Inbox,
   ListVideo,
+  MonitorPlay,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { INDUSTRIES, INDUSTRY_COLORS } from "@/lib/constants";
+import {
+  INDUSTRIES,
+  INDUSTRY_COLORS,
+  WATCH_PARTY_URL,
+} from "@/lib/constants";
 
-const SECTIONS = [
-  { href: "/",          label: "Home Feed",       icon: Home },
-  { href: "/discover",  label: "Discover",        icon: Compass },
-  { href: "/watchlist", label: "My Watchlist",    icon: Bookmark },
-  { href: "/groups",    label: "My Groups",       icon: Users },
-  { href: "/recommendations", label: "Inbox",     icon: Inbox },
-  { href: "/lists",     label: "My Lists",        icon: ListVideo },
+type Section = {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  external?: boolean;
+  badge?: string;
+};
+
+const SECTIONS: Section[] = [
+  { href: "/",                label: "Home Feed",     icon: Home },
+  { href: "/discover",        label: "Discover",      icon: Compass },
+  { href: "/watchlist",       label: "My Watchlist",  icon: Bookmark },
+  { href: "/groups",          label: "My Groups",     icon: Users },
+  { href: "/recommendations", label: "Inbox",         icon: Inbox },
+  { href: "/lists",           label: "My Lists",      icon: ListVideo },
+  {
+    href: WATCH_PARTY_URL,
+    label: "Watch Party",
+    icon: MonitorPlay,
+    external: true,
+    badge: "NEW",
+  },
 ];
 
 /**
@@ -35,25 +55,48 @@ export function Sidebar() {
         {SECTIONS.map((s) => {
           const Icon = s.icon;
           const active =
-            s.href === "/" ? pathname === "/" : pathname.startsWith(s.href);
-          return (
-            <Link
-              key={s.href}
-              href={s.href}
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                active
-                  ? "bg-brand-surface text-brand-text"
-                  : "text-brand-textMuted hover:bg-brand-surface/60 hover:text-brand-text"
-              )}
-            >
+            !s.external &&
+            (s.href === "/" ? pathname === "/" : pathname.startsWith(s.href));
+
+          const inner = (
+            <>
               <Icon
                 className={cn(
                   "h-4 w-4 transition-colors",
-                  active ? "text-brand-gold" : "text-brand-textMuted group-hover:text-brand-text"
+                  active
+                    ? "text-brand-gold"
+                    : "text-brand-textMuted group-hover:text-brand-text"
                 )}
               />
-              {s.label}
+              <span className="flex-1">{s.label}</span>
+              {s.badge && (
+                <span className="rounded-full border border-brand-goldDim bg-brand-goldGlow px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-brand-gold">
+                  {s.badge}
+                </span>
+              )}
+            </>
+          );
+
+          const cls = cn(
+            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+            active
+              ? "bg-brand-surface text-brand-text"
+              : "text-brand-textMuted hover:bg-brand-surface/60 hover:text-brand-text"
+          );
+
+          return s.external ? (
+            <a
+              key={s.href}
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cls}
+            >
+              {inner}
+            </a>
+          ) : (
+            <Link key={s.href} href={s.href} className={cls}>
+              {inner}
             </Link>
           );
         })}

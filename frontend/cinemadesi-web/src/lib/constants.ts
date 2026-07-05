@@ -5,6 +5,11 @@ export const API_URL =
 
 export const TMDB_IMAGE_PREFIX = "https://image.tmdb.org/t/p/w500";
 
+// External watch-party app (Kosmi-style synchronous viewing with
+// voice + text chat). Will move into this codebase later; single
+// constant so the swap is one line.
+export const WATCH_PARTY_URL = "https://watch-party-tau-azure.vercel.app/";
+
 export const INDUSTRIES: { value: Industry; label: string; emoji: string }[] = [
   { value: "BOLLYWOOD", label: "Bollywood", emoji: "✦" },
   { value: "TAMIL",     label: "Tamil",     emoji: "✦" },

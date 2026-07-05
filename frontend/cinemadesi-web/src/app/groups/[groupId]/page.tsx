@@ -9,11 +9,14 @@ import {
   Film as FilmIcon,
   Loader2,
   LogOut,
+  MonitorPlay,
+  Sparkles,
   UserMinus,
   UserPlus,
   Users,
   UsersRound,
 } from "lucide-react";
+import { WATCH_PARTY_URL } from "@/lib/constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -134,6 +137,43 @@ function GroupDetailContent() {
           </div>
         </div>
       </motion.section>
+
+      {/* Watch Party CTA — synchronous viewing with voice + text chat */}
+      <motion.a
+        href={WATCH_PARTY_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        className="group relative mt-6 flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-goldDim bg-gradient-to-br from-brand-goldGlow via-brand-surface to-brand-surface p-5 transition-all hover:border-brand-gold hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-15px_rgba(232,184,75,0.35)]"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gold-radial blur-3xl opacity-70"
+        />
+        <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-brand-goldDim bg-brand-bg text-brand-gold">
+          <MonitorPlay className="h-5 w-5" />
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">
+              new
+            </p>
+            <Sparkles className="h-3 w-3 text-brand-gold" />
+          </div>
+          <h3 className="mt-1 font-serif text-lg font-semibold text-brand-text">
+            Watch this movie together
+          </h3>
+          <p className="mt-0.5 text-sm text-brand-textMuted">
+            Sync a YouTube or local video with voice + text chat. Anyone in the
+            call can play, pause, or scrub.
+          </p>
+        </div>
+        <div className="relative hidden shrink-0 rounded-lg border border-brand-goldDim bg-brand-bg px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-brand-gold transition-all group-hover:bg-brand-goldGlow sm:block">
+          Start party →
+        </div>
+      </motion.a>
 
       {/* Tabs */}
       <Tabs defaultValue="common" className="mt-10">
